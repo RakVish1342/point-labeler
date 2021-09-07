@@ -1,3 +1,6 @@
+# Original Repository Information
+This repository is a clone of ```https://github.com/jbehley/point_labeler``` with personal changes.
+
 # Point Cloud Labeling Tool
 
  Tool for labeling of a single point clouds or a stream of point clouds. 

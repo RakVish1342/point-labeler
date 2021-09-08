@@ -10,12 +10,12 @@
 #include "common.h"
 #include "data/kitti_utils.h"
 
-// // PCL includes
-// #include "pcd_custom_types.h"
-// #include <pcl/io/pcd_io.h>
-// #include <pcl/point_types.h>
-// #include <pcl_conversions/pcl_conversions.h>
-// #include <pcl/common/impl/io.hpp> // SHOULD NOT BE INCLUDED AS THE FIRST LINE!! Leads to compilation error: ‘int pcl::getFieldIndex(const pcl::PointCloud<PointT>&, const string&, std::vector<pcl::PCLPointField>&)’ should have been declared inside ‘pcl’.
+// PCL includes
+#include "pcd_custom_types.h"
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/common/impl/io.hpp> // SHOULD NOT BE INCLUDED AS THE FIRST LINE!! Leads to compilation error: ‘int pcl::getFieldIndex(const pcl::PointCloud<PointT>&, const string&, std::vector<pcl::PCLPointField>&)’ should have been declared inside ‘pcl’.
 
 
 /** \brief tile-based KITTI reader.
@@ -78,7 +78,8 @@ class KittiReader {
 
  protected:
   void readPoints(const std::string& filename, Laserscan& scan);
-  void readLabels(const std::string& filename, std::vector<uint32_t>& labels);
+  // void readLabels(const std::string& filename, std::vector<uint32_t>& labels);
+  void readLabels(const std::string& filename, std::vector<uint32_t>& labels, uint32_t cloud_num_points = 0);
   void readPoses(const std::string& filename, std::vector<Eigen::Matrix4f>& poses);
 
   QDir base_dir_;
@@ -91,8 +92,11 @@ class KittiReader {
   bool b_bin_cloud = 0; // 0 = PCD XYZI or XYZIR file, 1 = binary XYZI file
   bool b_bin_label = 0; // 0 = ASCII labels file, 1 = binary labels file
 
-  // using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
-  // pcl::PointCloud<PT_XYZIR>::Ptr tmpCloudXYZIR; // just to read from PCD files
+  using PT_XYZ = pcl::PointXYZ;
+  using PT_XYZI = pcl::PointXYZI;
+  using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
+  using PT_TYPE = PT_XYZIR;
+
 
   // cache reads from before.
   std::map<uint32_t, PointcloudPtr> pointsCache_;

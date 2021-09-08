@@ -570,7 +570,6 @@ void Mainframe::save() {
 
   std::cout << "RakPrint: SAVING DUE TO SAVE BUTTON" << std::endl;
 
-
   int32_t w = 300, h = 150;
   info_->setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
   info_->show();

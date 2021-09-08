@@ -10,16 +10,6 @@
 
 #include <boost/lexical_cast.hpp>
 
-
-        // PCL includes
-        #include "pcd_custom_types.h"
-        #include <pcl/io/pcd_io.h>
-        #include <pcl/point_types.h>
-        #include <pcl_conversions/pcl_conversions.h>
-        #include <pcl/common/impl/io.hpp> 
-
-
-
 // Rakshith: Initialize the point labeller tool
 void KittiReader::initialize(const QString& directory) {
   velodyne_filenames_.clear();
@@ -43,15 +33,6 @@ void KittiReader::initialize(const QString& directory) {
     velodyne_filenames_.push_back(velodyne_dir.filePath(entries.at(i)).toStdString());
   }
 
-
-  for(std::string f : velodyne_filenames_) {
-    std::cout << "asdfasdfasdfasdfasdfasdfasdfasdf" << f << std::endl;
-  }
-
-
-
-
-
   if (!base_dir_.exists("calib.txt"))
     throw std::runtime_error("Missing calibration file: " + base_dir_.filePath("calib.txt").toStdString());
 
@@ -72,16 +53,13 @@ void KittiReader::initialize(const QString& directory) {
     else base_dir_.mkdir("labels_ascii");
   }
 
-  std::cout << "LABEL FILENAMES" << std::endl;
-
-
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
     QString filename;
     if(b_bin_label) filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
     else filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label_ascii";
-
-    std::cout << "filename: " << labels_dir.filePath(filename).toStdString().c_str() << std::endl;
-    std::cout << "filename velo: " << velodyne_filenames_[i].c_str() << std::endl;
+    std::cout << "---" << std::endl;
+    std::cout << "filename_velo: " << velodyne_filenames_[i].c_str() << std::endl;
+    std::cout << "filename_label: " << labels_dir.filePath(filename).toStdString().c_str() << std::endl;
 
     if (!labels_dir.exists(filename)) {
 
@@ -104,61 +82,27 @@ void KittiReader::initialize(const QString& directory) {
         out.close();
       }
       else {
-
-        std::cout << "ELSE" << std::endl;
-
-
-        // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0.pcd";
-        // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0_quadrants_full.pcd";
-        // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0_quadrants_seg.pcd";
-        // std::string fff = "/home/rxth/catkin_ws/src/TreeMapping/tree_mapping/pointclouds/test_cylinders_simulation/from_custom_drone_positions/quadrants/seg/cloud0_quadrants_seg.pcd";
-        std::string fff = "/home/rxth/catkin_ws/src/TreeMapping/tree_mapping/pointclouds/pcd/cloud0_0.000000.pcd";
-        // std::string fff = "JUNK_PATH.pcd";
-        std::cout << "opening " << fff << std::endl;
-
-        # if defined __cplusplus
-        std::cout << "DEFINED" << std::endl;
-        #endif 
-        
-        // using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
-        // pcl::PointCloud<PT_XYZIR>::Ptr cloud;
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
-
-        std::cout << "---" << std::endl;
-        printf("%#010x\n", cloud.get()); 
-        assert( cloud.get() != 0 );
-
-        // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        // pcl::io::loadPCDFile<PT_XYZIR> (fff, *cloud);
-        // if (pcl::io::loadPCDFile<velodyne_pointcloud::PointXYZIR> (fff, *cloud) == -1) {
-        //     PCL_ERROR ("Couldn't read PCD file. \n");
-        // }
-        if (pcl::io::loadPCDFile<pcl::PointXYZ> (fff, *cloud) == -1) {
+        std::string path = velodyne_filenames_[i].c_str();
+        pcl::PointCloud<PT_TYPE>::Ptr tmpCloud (new pcl::PointCloud<PT_TYPE>);        
+        if (pcl::io::loadPCDFile<PT_TYPE> (path, *tmpCloud) == -1) {
             PCL_ERROR ("Couldn't read PCD file. \n");
         }
-        std::cout << "success: " << cloud->size() << std::endl;
-        exit(0);
+        int num_points = tmpCloud->size();
 
-
-
-
-        // if (pcl::io::loadPCDFile<velodyne_pointcloud::PointXYZIR> (fff, *tmpCloudXYZIR) == -1) {
-        //     PCL_ERROR ("Couldn't read PCD file. \n");
-        // }
-        // std::cout << "success" << std::endl;
-
-        
+       
+        std::ofstream out(labels_dir.filePath(filename).toStdString().c_str());
+        std::string str;
+        str += "FORMAT: POINT_IDX_IN_CLOUD, CLAstr_LABEL\n";
+        for(int i = 0; i < num_points; ++i) {
+          str += std::to_string(i) + " " + std::to_string((int)0); 
+        }
+        out << str;
+        out.close();
       }
-      
     }
 
     label_filenames_.push_back(labels_dir.filePath(filename).toStdString().c_str());
   }
-
-  for(std::string f : label_filenames_) {
-    std::cout << "asdfasdfasdfasdfasdfasdfasdfasdf" << f << std::endl;
-  }
-  exit(0);
 
   std::string missing_img = QDir::currentPath().toStdString() + "/../assets/missing.png";
   QDir image_dir(base_dir_.filePath("image_2"));
@@ -335,6 +279,7 @@ void KittiReader::retrieve(const Eigen::Vector3f& position, std::vector<uint32_t
   retrieve(idx.x(), idx.y(), indexes, points, labels, images);
 }
 
+// Rakshith: Read scans on opening a folder.
 void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
                            std::vector<LabelsPtr>& labels, std::vector<std::string>& images) {
   indexes.clear();
@@ -357,12 +302,15 @@ void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexe
       scansRead += 1;
 
       points.push_back(std::shared_ptr<Laserscan>(new Laserscan));
+      // Rakshith: Function that reads lidar scans from binary file
       readPoints(velodyne_filenames_[t], *points.back());
       pointsCache_[t] = points.back();
       points.back()->pose = poses_[t];
 
       labels.push_back(std::shared_ptr<std::vector<uint32_t>>(new std::vector<uint32_t>()));
-      readLabels(label_filenames_[t], *labels.back());
+      // Rakshith: Function that reads lidar scans from binary file
+      uint32_t num_points = points.back()->size(); // To prevent resizing of labels vector should pass cloud size
+      readLabels(label_filenames_[t], *labels.back(), num_points);
       labelCache_[t] = labels.back();
 
       if (points.back()->size() != labels.back()->size()) {
@@ -431,90 +379,173 @@ void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<Label
       continue;
     }
 
-    // Rakshith: Update label file. By default triggered on pressing save button.
-    std::ofstream out(label_filenames_[indexes[i]].c_str());
-    // labels = vector<LabelsPtr>;
-    // From commons.h: typedef std::shared_ptr<std::vector<uint32_t>> LabelsPtr;
-    // So, labels[i] => LabelsPtr => std::vector<uint32_t>
-    // (const char*)&(*labels[i])[0] ==> labels[i] = ptr to label data-struct, * dereferences it, 
-    // Of that, reference/memo-addr of 0th idx is typecasted to (const char*)
-    // And a chunk of labels[i]->size() * sizeof(unint32_t) is written to disk as binary. 
-    out.write((const char*)&(*labels[i])[0], labels[i]->size() * sizeof(uint32_t));
+    if(b_bin_label) {
+      // Rakshith: Update label file. By default triggered on pressing save button.
+      std::ofstream out(label_filenames_[indexes[i]].c_str());
+      // labels = vector<LabelsPtr>;
+      // From commons.h: typedef std::shared_ptr<std::vector<uint32_t>> LabelsPtr;
+      // So, labels[i] => LabelsPtr => std::vector<uint32_t>
+      // (const char*)&(*labels[i])[0] ==> labels[i] = ptr to label data-struct, * dereferences it, 
+      // Of that, reference/memo-addr of 0th idx is typecasted to (const char*)
+      // And a chunk of labels[i]->size() * sizeof(unint32_t) is written to disk as binary. 
+      out.write((const char*)&(*labels[i])[0], labels[i]->size() * sizeof(uint32_t));
+      out.close();
+    } 
+    else {
+      std::ofstream out(label_filenames_[indexes[i]].c_str());
 
-    // Try to see what *(labels[i]) has. Also note: it is not *(labels)[i] BUT *(labels[i]) I think.
-    // 
+      std::string str;
+      str += "FORMAT: POINT_IDX_IN_CLOUD, CLAstr_LABEL\n";
+      
+      LabelsPtr labels_for_this_scan = labels[i]; // labels for this scan
+      int num_points = labels_for_this_scan->size(); // Assuming one label per points, number of labels = number of points in this scan
+      for(int i = 0; i < num_points; ++i) {
 
-
-
-
-
-    out.close();
+        int class_label_for_point = (*labels_for_this_scan)[i];
+        str += std::to_string(i) + " " + std::to_string( class_label_for_point ) + "\n";
+      }
+      out << str;
+      
+      out.close();
+    }
   }
 }
 
 void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
   //@Rakshith
-  std::cout << "-----" << std::endl;
+  std::cout << "=== READ POINTS ===" << std::endl;
   std::cout << filename << std::endl;
   
-  std::ifstream in(filename.c_str(), std::ios::binary);
-  if (!in.is_open()) return;
+  if(b_bin_cloud) {
+    std::ifstream in(filename.c_str(), std::ios::binary);
+    if (!in.is_open()) return;
 
-  scan.clear();
+    scan.clear();
 
-  in.seekg(0, std::ios::end);
-  uint32_t num_points = in.tellg() / (4 * sizeof(float));
-  in.seekg(0, std::ios::beg);
+    in.seekg(0, std::ios::end);
+    uint32_t num_points = in.tellg() / (4 * sizeof(float));
+    in.seekg(0, std::ios::beg);
 
-  std::vector<float> values(4 * num_points);
-  in.read((char*)&values[0], 4 * num_points * sizeof(float));
+    std::vector<float> values(4 * num_points);
+    in.read((char*)&values[0], 4 * num_points * sizeof(float));
 
-  //@Rakshith
-  std::cout << "num_points: " << num_points << std::endl;
-  std::cout << "sizeof(float): " << sizeof(float) << std::endl;
-  std::cout << "4*sizeof(float): " << 4*sizeof(float) << std::endl;
-  std::cout << "4*num_points*sizeof(float): " << 4*num_points*sizeof(float) << std::endl;
+    //@Rakshith
+    std::cout << "num_points: " << num_points << std::endl;
+    std::cout << "sizeof(float): " << sizeof(float) << std::endl;
+    std::cout << "4*sizeof(float): " << 4*sizeof(float) << std::endl;
+    std::cout << "4*num_points*sizeof(float): " << 4*num_points*sizeof(float) << std::endl;
 
 
-  in.close();
+    in.close();
 
-  // Operations are on REFERENCE of "scan.points" and "scan.remissions". 
-  // So effectively changing "points" and "remissions" variables is changing the "scan" variable!! 
-  // By convention "scan" should have been accepted as a reference in the funciton call itself rather than here.
-  std::vector<Point3f>& points = scan.points;
-  std::vector<float>& remissions = scan.remissions;
+    // Operations are on REFERENCE of "scan.points" and "scan.remissions". 
+    // So effectively changing "points" and "remissions" variables is changing the "scan" variable!! 
+    // By convention "scan" should have been accepted as a reference in the funciton call itself rather than here.
+    std::vector<Point3f>& points = scan.points;
+    std::vector<float>& remissions = scan.remissions;
 
-  points.resize(num_points);
-  remissions.resize(num_points);
+    points.resize(num_points);
+    remissions.resize(num_points);
 
-  for (uint32_t i = 0; i < num_points; ++i) {
-    points[i].x = values[4 * i];
-    points[i].y = values[4 * i + 1];
-    points[i].z = values[4 * i + 2];
-    remissions[i] = values[4 * i + 3];
+    for (uint32_t i = 0; i < num_points; ++i) {
+      points[i].x = values[4 * i];
+      points[i].y = values[4 * i + 1];
+      points[i].z = values[4 * i + 2];
+      remissions[i] = values[4 * i + 3];
+    }
+  }
+  else
+  {
+    scan.clear();
+
+    // Operations are on REFERENCE of "scan.points" and "scan.remissions". 
+    // So effectively changing "points" and "remissions" variables is changing the "scan" variable!! 
+    // By convention "scan" should have been accepted as a reference in the funciton call itself rather than here.
+    std::vector<Point3f>& points = scan.points;
+    std::vector<float>& remissions = scan.remissions;
+
+    pcl::PointCloud<PT_TYPE>::Ptr tmpCloud (new pcl::PointCloud<PT_TYPE>);
+    if (pcl::io::loadPCDFile<PT_TYPE> (filename, *tmpCloud) == -1) {
+        PCL_ERROR ("Couldn't read PCD file. \n");
+    }
+    int num_points = tmpCloud->size(); 
+    std::cout << "size: " << num_points << std::endl; 
+
+    points.resize(num_points);
+    remissions.resize(num_points);
+
+    PT_TYPE pt;
+    for (int i = 0; i < num_points; ++i) {
+      pt = tmpCloud->points[i];
+      points[i].x = pt.x;
+      points[i].y = pt.y;
+      points[i].z = pt.z;
+      remissions[i] = pt.intensity;
+    }
   }
 }
 
-void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>& labels) {
-  std::ifstream in(filename.c_str(), std::ios::binary);
-  if (!in.is_open()) {
-    std::cerr << "Unable to open label file. " << std::endl;
-    return;
+// void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>& labels) {
+void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>& labels, uint32_t cloud_num_points) {
+  std::cout << "=== READ LABELS ===" << std::endl;
+
+  if(b_bin_label) {
+    std::ifstream in(filename.c_str(), std::ios::binary);
+    if (!in.is_open()) {
+      std::cerr << "Unable to open label file. " << std::endl;
+      return;
+    }
+
+    labels.clear();
+
+    in.seekg(0, std::ios::end);
+    uint32_t num_points = in.tellg() / (sizeof(uint32_t));
+    in.seekg(0, std::ios::beg);
+
+    labels.resize(num_points);
+    in.read((char*)&labels[0], num_points * sizeof(uint32_t));
+
+    in.close();
   }
+  else
+  {
+    labels.clear();
+    labels.resize(cloud_num_points); // need to re-read PCD file to figure size of cloud so just passing as parameter (OR) can just let C++ resize automatically.
 
-  labels.clear();
+    std::ifstream in(filename.c_str(), std::ios_base::in);
 
-  in.seekg(0, std::ios::end);
-  uint32_t num_points = in.tellg() / (sizeof(uint32_t));
-  in.seekg(0, std::ios::beg);
+    // Get rid of header lines
+    std::string line;
+    std::getline(in, line);
+    std::cout << "HEADER LINE 1: " << line << std::endl;
 
-  labels.resize(num_points);
-  in.read((char*)&labels[0], num_points * sizeof(uint32_t));
+    // process other lines
+    int ctr = 0;
+    std::string point_index_str, class_label_str;
+    uint32_t point_index, class_label;
+    while (std::getline(in, line))
+    {
+        // Read labels
+        std::stringstream ss(line);
+        ss >> point_index_str >> class_label_str;
 
-  in.close();
+        point_index = std::stoi(point_index_str);
+        class_label = std::stoi(class_label_str);
+
+        // For now, we are sure that point_indices are continuous and 
+        // no missing/skipped numbers exist so can use point_index stored in files
+        labels[point_index] = class_label;
+        // labels[ctr] = class_label; // otherwise just use a counter variable.
+
+        ctr += 1;
+    }
+    std::cout << "non-header line ctr: " << ctr << std::endl;
+  }
+  
 }
 
 void KittiReader::readPoses(const std::string& filename, std::vector<Eigen::Matrix4f>& poses) {
+  std::cout << "=== READ POSES ===" << std::endl;
 
   ///@Rakshith
   std::cout << "------" << std::endl;

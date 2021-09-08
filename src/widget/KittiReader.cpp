@@ -10,6 +10,16 @@
 
 #include <boost/lexical_cast.hpp>
 
+
+        // PCL includes
+        #include "pcd_custom_types.h"
+        #include <pcl/io/pcd_io.h>
+        #include <pcl/point_types.h>
+        #include <pcl_conversions/pcl_conversions.h>
+        #include <pcl/common/impl/io.hpp> 
+
+
+
 // Rakshith: Initialize the point labeller tool
 void KittiReader::initialize(const QString& directory) {
   velodyne_filenames_.clear();
@@ -95,28 +105,49 @@ void KittiReader::initialize(const QString& directory) {
       }
       else {
 
-/* TTTTTTTTTTTTTT
         std::cout << "ELSE" << std::endl;
+
 
         // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0.pcd";
         // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0_quadrants_full.pcd";
-        std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0_quadrants_seg.pcd";
+        // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0_quadrants_seg.pcd";
+        // std::string fff = "/home/rxth/catkin_ws/src/TreeMapping/tree_mapping/pointclouds/test_cylinders_simulation/from_custom_drone_positions/quadrants/seg/cloud0_quadrants_seg.pcd";
+        std::string fff = "/home/rxth/catkin_ws/src/TreeMapping/tree_mapping/pointclouds/pcd/cloud0_0.000000.pcd";
+        // std::string fff = "JUNK_PATH.pcd";
         std::cout << "opening " << fff << std::endl;
-        using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
-        pcl::PointCloud<PT_XYZIR>::Ptr cloud;
-        pcl::io::loadPCDFile<PT_XYZIR> (fff, *cloud);
 
-        std::cout << "success" << std::endl;
+        # if defined __cplusplus
+        std::cout << "DEFINED" << std::endl;
+        #endif 
+        
+        // using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
+        // pcl::PointCloud<PT_XYZIR>::Ptr cloud;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+
+        std::cout << "---" << std::endl;
+        printf("%#010x\n", cloud.get()); 
+        assert( cloud.get() != 0 );
+
+        // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        // pcl::io::loadPCDFile<PT_XYZIR> (fff, *cloud);
+        // if (pcl::io::loadPCDFile<velodyne_pointcloud::PointXYZIR> (fff, *cloud) == -1) {
+        //     PCL_ERROR ("Couldn't read PCD file. \n");
+        // }
+        if (pcl::io::loadPCDFile<pcl::PointXYZ> (fff, *cloud) == -1) {
+            PCL_ERROR ("Couldn't read PCD file. \n");
+        }
+        std::cout << "success: " << cloud->size() << std::endl;
         exit(0);
 
 
-        if (pcl::io::loadPCDFile<velodyne_pointcloud::PointXYZIR> (fff, *tmpCloudXYZIR) == -1) {
-            PCL_ERROR ("Couldn't read PCD file. \n");
-        }
 
-        std::cout << "success" << std::endl;
 
-*/        
+        // if (pcl::io::loadPCDFile<velodyne_pointcloud::PointXYZIR> (fff, *tmpCloudXYZIR) == -1) {
+        //     PCL_ERROR ("Couldn't read PCD file. \n");
+        // }
+        // std::cout << "success" << std::endl;
+
+        
       }
       
     }
@@ -124,14 +155,10 @@ void KittiReader::initialize(const QString& directory) {
     label_filenames_.push_back(labels_dir.filePath(filename).toStdString().c_str());
   }
 
-
-
-/* TTTTTTTTTTTTTTTTTTTTTT
   for(std::string f : label_filenames_) {
     std::cout << "asdfasdfasdfasdfasdfasdfasdfasdf" << f << std::endl;
   }
   exit(0);
-*/
 
   std::string missing_img = QDir::currentPath().toStdString() + "/../assets/missing.png";
   QDir image_dir(base_dir_.filePath("image_2"));

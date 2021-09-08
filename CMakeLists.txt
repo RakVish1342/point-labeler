@@ -2,8 +2,11 @@ PROJECT(point_labeler)
 
 cmake_minimum_required(VERSION 2.6)
 
-set(CMAKE_C_FLAGS "-Wall -O3 -g")
+set(CMAKE_C_FLAGS "-Wall -O3 -g") # O3 is for speed optimization
 set(CMAKE_CXX_FLAGS "-Wall -O3 -g")
+
+## "locate PCLConfig.cmake"
+# set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl/")
 
 find_package(OpenGL REQUIRED)
 find_package(Qt5Xml REQUIRED)
@@ -13,7 +16,11 @@ find_package(GLEW REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
 
 find_package(catkin COMPONENTS 
-     glow)
+     glow
+     PCL
+     pcl_ros
+     pcl_conversions
+    )
 
 if(catkin_FOUND)
   message("Found catkin")
@@ -30,7 +37,8 @@ include_directories(${catkin_INCLUDE_DIRS} src/ ${QT5_INCLUDE_DIRS} ${GLEW_INCLU
 set(CMAKE_INCLUDE_CURRENT_DIR ON) # needs to be activated for qt generated files in build directory.
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_FLAGS "-std=c++11 -O3  -Wall ${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS "-UDEBUG_GL -UDEBUG -DNDEBUG -g2 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-UDEBUG_GL -UDEBUG -DNDEBUG -g2 ${CMAKE_CXX_FLAGS}") # NDEBUG is to prevent assertions.
+
 
 # configure_file(assets/labels.xml ${CMAKE_SOURCE_DIR}/bin/labels.xml COPYONLY)
 ADD_CUSTOM_TARGET(link_labels ALL COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/assets/labels.xml ${CMAKE_SOURCE_DIR}/bin/labels.xml)
@@ -129,5 +137,6 @@ if(GTEST_FOUND)
   add_subdirectory(src/test)
 endif()
 
-target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
+target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${PCL_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
+# target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
 

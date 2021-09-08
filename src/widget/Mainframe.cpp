@@ -534,6 +534,7 @@ void Mainframe::open() {
       return;
     }
 
+    // Rakshith: Main object that retains cloud, label, etc state when application is opened or running.
     reader_.initialize(retValue);
 
     ui.mViewportXYZ->setMaximumInstanceIds(reader_.getMaxInstanceIds());
@@ -564,13 +565,22 @@ void Mainframe::open() {
   }
 }
 
+// Rakshith: Save Button
 void Mainframe::save() {
+
+  std::cout << "RakPrint: SAVING DUE TO SAVE BUTTON" << std::endl;
+
+
   int32_t w = 300, h = 150;
   info_->setGeometry(x() + width() / 2 - 0.5 * w, y() + height() / 2 - 0.5 * h, w, h);
   info_->show();
 
   statusBar()->showMessage("Writing labels...");
   ui.mViewportXYZ->updateLabels();
+
+  // Rakshith: Main function call that ends up calling the wirte operation on labels
+  // indexes = vector of indices of all the sequence of scans that have been loaded into memory
+  // labels = data structure holding all the label related info for each of the points in each of the scans.
   reader_.update(indexes_, labels_);
   reader_.updateMetaInformation(ui.mViewportXYZ->getMaximumInstanceIds());
 
@@ -783,18 +793,24 @@ void Mainframe::setCurrentScanIdx(int32_t idx) {
   if (images_.size() > uint32_t(idx)) wImgWidget_->setImage(images_[idx]);
 }
 
+// Rakshith: Read scans on opening a folder.
 void Mainframe::readAsync(uint32_t i, uint32_t j) {
+
+  std::cout << "RakPrint: READING ASYNC" << std::endl;
   // TODO progress indicator.
   emit readerStarted();
 
+  // Rakshith: scan index among the N scans loaded (by default 500 scans loaded and indexes holds the indx for all these scans).
+  // Definition found in KittiReader.h: struct Tile
   std::vector<uint32_t> indexes;
-  std::vector<PointcloudPtr> points;
-  std::vector<LabelsPtr> labels;
+  std::vector<PointcloudPtr> points; // points in a given scan or all scans or scans visible in viewer??
+  std::vector<LabelsPtr> labels; // labels for the given scan or all scans or scans visible in viewer??
   std::vector<std::string> images;
 
   //  std::vector<uint32_t> oldIndexes = indexes_;
   //  std::vector<LabelsPtr> oldLabels = labels_;
 
+  // Rakshith: Clear and then retrieve all data members and read/load from scratch
   reader_.retrieve(i, j, indexes, points, labels, images);
 
   indexes_ = indexes;

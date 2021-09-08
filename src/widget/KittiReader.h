@@ -10,6 +10,16 @@
 #include "common.h"
 #include "data/kitti_utils.h"
 
+
+/* TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+// PCL includes
+#include "pcd_custom_types.h"
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/common/impl/io.hpp> // SHOULD NOT BE INCLUDED AS THE FIRST LINE!! Leads to compilation error: ‘int pcl::getFieldIndex(const pcl::PointCloud<PointT>&, const string&, std::vector<pcl::PCLPointField>&)’ should have been declared inside ‘pcl’.
+*/
+
 /** \brief tile-based KITTI reader.
  *
  *  Given a size of a tile, the reader reads all scans that potentially overlap with the tile.
@@ -80,6 +90,14 @@ class KittiReader {
   std::vector<std::string> label_filenames_;
   std::vector<std::string> image_filenames_;
 
+  bool b_bin_cloud = 1; // 0 = PCD XYZI or XYZIR file, 1 = binary XYZI file
+  bool b_bin_label = 1; // 0 = ASCII labels file, 1 = binary labels file
+
+
+/* TTTTTTTTTTTTTTTTTTTTTTtt
+  using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
+  pcl::PointCloud<PT_XYZIR>::Ptr tmpCloudXYZIR; // just to read from PCD files
+*/
   // cache reads from before.
   std::map<uint32_t, PointcloudPtr> pointsCache_;
   std::map<uint32_t, LabelsPtr> labelCache_;

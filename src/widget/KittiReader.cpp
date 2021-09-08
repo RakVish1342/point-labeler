@@ -10,6 +10,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+// Rakshith: Initialize the point labeller tool
 void KittiReader::initialize(const QString& directory) {
   velodyne_filenames_.clear();
   label_filenames_.clear();
@@ -20,12 +21,26 @@ void KittiReader::initialize(const QString& directory) {
   labelCache_.clear();
   tiles_.clear();
 
+  // Rakshith: Change directory name for "velodyne_pcd" files (rather than binary files)
   base_dir_ = QDir(directory);
-  QDir velodyne_dir(base_dir_.filePath("velodyne"));
+  QDir velodyne_dir;
+  QDir velodyne_dir_1(base_dir_.filePath("velodyne"));
+  QDir velodyne_dir_2(base_dir_.filePath("velodyne_pcd"));
+  if(b_bin_cloud) velodyne_dir = velodyne_dir_1;
+  else velodyne_dir = velodyne_dir_2;
   QStringList entries = velodyne_dir.entryList(QDir::Files, QDir::Name);
   for (int32_t i = 0; i < entries.size(); ++i) {
     velodyne_filenames_.push_back(velodyne_dir.filePath(entries.at(i)).toStdString());
   }
+
+
+  for(std::string f : velodyne_filenames_) {
+    std::cout << "asdfasdfasdfasdfasdfasdfasdfasdf" << f << std::endl;
+  }
+
+
+
+
 
   if (!base_dir_.exists("calib.txt"))
     throw std::runtime_error("Missing calibration file: " + base_dir_.filePath("calib.txt").toStdString());
@@ -35,29 +50,88 @@ void KittiReader::initialize(const QString& directory) {
   readPoses(base_dir_.filePath("poses.txt").toStdString(), poses_);
 
   // create label dir, etc.
-  QDir labels_dir(base_dir_.filePath("labels"));
-
+  QDir labels_dir;
+  QDir labels_dir_1(base_dir_.filePath("labels"));
+  QDir labels_dir_2(base_dir_.filePath("labels_ascii"));
+  if(b_bin_label) labels_dir = labels_dir_1;
+  else labels_dir = labels_dir_2;
   // find corresponding label files.
-  if (!labels_dir.exists()) base_dir_.mkdir("labels");
+  // Rakshith: Change directory name for "labels_ascii" files (rather than binary files)
+  if (!labels_dir.exists()) {
+    if(b_bin_label) base_dir_.mkdir("labels");
+    else base_dir_.mkdir("labels_ascii");
+  }
+
+  std::cout << "LABEL FILENAMES" << std::endl;
+
 
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
-    QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
+    QString filename;
+    if(b_bin_label) filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
+    else filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label_ascii";
+
+    std::cout << "filename: " << labels_dir.filePath(filename).toStdString().c_str() << std::endl;
+    std::cout << "filename velo: " << velodyne_filenames_[i].c_str() << std::endl;
+
     if (!labels_dir.exists(filename)) {
-      std::ifstream in(velodyne_filenames_[i].c_str());
-      in.seekg(0, std::ios::end);
-      uint32_t num_points = in.tellg() / (4 * sizeof(float));
-      in.close();
 
-      std::ofstream out(labels_dir.filePath(filename).toStdString().c_str());
+      if(b_bin_label) {
+        std::ifstream in(velodyne_filenames_[i].c_str());
+        in.seekg(0, std::ios::end);
+        uint32_t num_points = in.tellg() / (4 * sizeof(float));
+        in.close();
 
-      std::vector<uint32_t> labels(num_points, 0);
-      out.write(reinterpret_cast<const char*>(labels.data()), num_points * sizeof(uint32_t));
+        std::ofstream out(labels_dir.filePath(filename).toStdString().c_str());
 
-      out.close();
+        // Rakshith: Initialize the labels file for each scan that is loaded
+        // Each labels file has the same name as the scan name but ends with .labels
+        // The labels file has scan.size() number of integers in the file, 
+        // each representing the class that a particular point from that scan belongs to
+        // HOW ARE MULTIPLE LABLES ENCODED?? --- disabled by default since "overwrite labels" is checked in the toolbar on top. Anyway, not needed for my application
+        std::vector<uint32_t> labels(num_points, 0);
+        out.write(reinterpret_cast<const char*>(labels.data()), num_points * sizeof(uint32_t));
+
+        out.close();
+      }
+      else {
+
+/* TTTTTTTTTTTTTT
+        std::cout << "ELSE" << std::endl;
+
+        // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0.pcd";
+        // std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0_quadrants_full.pcd";
+        std::string fff = "/media/rxth/DATA2/tmp/kitti_data1_single_marked_test_custom/velodyne_pcd/cloud0_quadrants_seg.pcd";
+        std::cout << "opening " << fff << std::endl;
+        using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
+        pcl::PointCloud<PT_XYZIR>::Ptr cloud;
+        pcl::io::loadPCDFile<PT_XYZIR> (fff, *cloud);
+
+        std::cout << "success" << std::endl;
+        exit(0);
+
+
+        if (pcl::io::loadPCDFile<velodyne_pointcloud::PointXYZIR> (fff, *tmpCloudXYZIR) == -1) {
+            PCL_ERROR ("Couldn't read PCD file. \n");
+        }
+
+        std::cout << "success" << std::endl;
+
+*/        
+      }
+      
     }
 
-    label_filenames_.push_back(labels_dir.filePath(filename).toStdString());
+    label_filenames_.push_back(labels_dir.filePath(filename).toStdString().c_str());
   }
+
+
+
+/* TTTTTTTTTTTTTTTTTTTTTT
+  for(std::string f : label_filenames_) {
+    std::cout << "asdfasdfasdfasdfasdfasdfasdfasdf" << f << std::endl;
+  }
+  exit(0);
+*/
 
   std::string missing_img = QDir::currentPath().toStdString() + "/../assets/missing.png";
   QDir image_dir(base_dir_.filePath("image_2"));
@@ -249,6 +323,7 @@ void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexe
 
   indexes = tiles_[tileIdxToOffset(i, j)].indexes;
   std::sort(indexes.begin(), indexes.end());
+  // loop through all scan
   for (uint32_t t : indexes) {
     indexesAfter.push_back(t);
     if (pointsCache_.find(t) == pointsCache_.end()) {
@@ -304,6 +379,7 @@ const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const { re
 
 void KittiReader::setTileSize(float size) { tileSize_ = size; }
 
+// Rakshith: Update label file.
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
   for (uint32_t i = 0; i < indexes.size(); ++i) {
     if (labels[i]->size() == 0) {
@@ -328,8 +404,23 @@ void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<Label
       continue;
     }
 
+    // Rakshith: Update label file. By default triggered on pressing save button.
     std::ofstream out(label_filenames_[indexes[i]].c_str());
+    // labels = vector<LabelsPtr>;
+    // From commons.h: typedef std::shared_ptr<std::vector<uint32_t>> LabelsPtr;
+    // So, labels[i] => LabelsPtr => std::vector<uint32_t>
+    // (const char*)&(*labels[i])[0] ==> labels[i] = ptr to label data-struct, * dereferences it, 
+    // Of that, reference/memo-addr of 0th idx is typecasted to (const char*)
+    // And a chunk of labels[i]->size() * sizeof(unint32_t) is written to disk as binary. 
     out.write((const char*)&(*labels[i])[0], labels[i]->size() * sizeof(uint32_t));
+
+    // Try to see what *(labels[i]) has. Also note: it is not *(labels)[i] BUT *(labels[i]) I think.
+    // 
+
+
+
+
+
     out.close();
   }
 }
@@ -359,6 +450,10 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
 
 
   in.close();
+
+  // Operations are on REFERENCE of "scan.points" and "scan.remissions". 
+  // So effectively changing "points" and "remissions" variables is changing the "scan" variable!! 
+  // By convention "scan" should have been accepted as a reference in the funciton call itself rather than here.
   std::vector<Point3f>& points = scan.points;
   std::vector<float>& remissions = scan.remissions;
 
@@ -412,3 +507,43 @@ void KittiReader::readPoses(const std::string& filename, std::vector<Eigen::Matr
   std::cout << poses.size() << std::endl;
 
 }
+
+
+// TODO Rakshith Tree Mapping:
+/*
+
+* Note process: load multiple view and label single, multiple in range, or all based on what is visible in an overlapping manner
+save all that are in memory (not only visible ones) to file
+
+* Label output in Ascii. 
+* Label loading from Ascii.
+
+* Depending on the labelling method and how points are being stored, may or may not need to read from pcd. 
+* MIGHT MAKE THIS TASK EASY IF LABELS ARE ADDED POINTWISE.
+* OR even if reading from PCD, just do it such that it is read from pcd and then changed to binary as required by rest of the tool.
+* Reading pcd as pcd files than binary -- for easy no pcd to binary conversion, XYZIR info retained rather than just XYZI, individual manipulation, ability to read as ascii when opened and later rviz visualization, etc.
+
+* change extension to .pcd and .asciilabel once changes have been made.
+
+
+
+
+Useful features:
+
+single scan
+scan range
+
+follow pose
+
+brush vs polygon
+
+overlap labels
+
+automatically save
+
+selecting tiles to control total RAM used
+
+view: perspective vs orthographic
+
+
+*/

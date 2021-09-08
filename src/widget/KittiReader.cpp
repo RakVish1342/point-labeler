@@ -12,6 +12,7 @@
 
 // Rakshith: Initialize the point labeller tool
 void KittiReader::initialize(const QString& directory) {
+  std::cout << ">>> KittiReader Init." << std::endl;
   velodyne_filenames_.clear();
   label_filenames_.clear();
   image_filenames_.clear();
@@ -21,7 +22,6 @@ void KittiReader::initialize(const QString& directory) {
   labelCache_.clear();
   tiles_.clear();
 
-  // Rakshith: Change directory name for "velodyne_pcd" files (rather than binary files)
   base_dir_ = QDir(directory);
   QDir velodyne_dir;
   QDir velodyne_dir_1(base_dir_.filePath("velodyne"));
@@ -40,6 +40,7 @@ void KittiReader::initialize(const QString& directory) {
 
   readPoses(base_dir_.filePath("poses.txt").toStdString(), poses_);
 
+  std::cout << ">>> Create label files for each lidar scan and set 0 as class id." << std::endl;
   // create label dir, etc.
   QDir labels_dir;
   QDir labels_dir_1(base_dir_.filePath("labels"));
@@ -47,7 +48,6 @@ void KittiReader::initialize(const QString& directory) {
   if(b_bin_label) labels_dir = labels_dir_1;
   else labels_dir = labels_dir_2;
   // find corresponding label files.
-  // Rakshith: Change directory name for "labels_ascii" files (rather than binary files)
   if (!labels_dir.exists()) {
     if(b_bin_label) base_dir_.mkdir("labels");
     else base_dir_.mkdir("labels_ascii");
@@ -57,8 +57,8 @@ void KittiReader::initialize(const QString& directory) {
     QString filename;
     if(b_bin_label) filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
     else filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label_ascii";
-    std::cout << "---" << std::endl;
-    std::cout << "filename_velo: " << velodyne_filenames_[i].c_str() << std::endl;
+
+    // std::cout << "filename_velo: " << velodyne_filenames_[i].c_str() << std::endl;
     std::cout << "filename_label: " << labels_dir.filePath(filename).toStdString().c_str() << std::endl;
 
     if (!labels_dir.exists(filename)) {
@@ -241,6 +241,7 @@ void KittiReader::initialize(const QString& directory) {
 
     in.close();
     std::cout << "finished." << std::endl;
+    std::cout << "-----------" << std::endl;
   } else {
     std::cout << "Generating intances.txt" << std::flush;
     // get the counts from the label files.
@@ -282,6 +283,9 @@ void KittiReader::retrieve(const Eigen::Vector3f& position, std::vector<uint32_t
 // Rakshith: Read scans on opening a folder.
 void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexes, std::vector<PointcloudPtr>& points,
                            std::vector<LabelsPtr>& labels, std::vector<std::string>& images) {
+  
+  std::cout << ">>> Reading cloud and label files." << std::endl;
+
   indexes.clear();
   points.clear();
   labels.clear();
@@ -303,12 +307,14 @@ void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexe
 
       points.push_back(std::shared_ptr<Laserscan>(new Laserscan));
       // Rakshith: Function that reads lidar scans from binary file
+      std::cout << ">>> Reading cloud file: " << velodyne_filenames_[t] << std::endl;
       readPoints(velodyne_filenames_[t], *points.back());
       pointsCache_[t] = points.back();
       points.back()->pose = poses_[t];
 
       labels.push_back(std::shared_ptr<std::vector<uint32_t>>(new std::vector<uint32_t>()));
       // Rakshith: Function that reads lidar scans from binary file
+      std::cout << ">>> Reading label file: " << label_filenames_[t] << std::endl;
       uint32_t num_points = points.back()->size(); // To prevent resizing of labels vector should pass cloud size
       readLabels(label_filenames_[t], *labels.back(), num_points);
       labelCache_[t] = labels.back();
@@ -329,7 +335,7 @@ void KittiReader::retrieve(uint32_t i, uint32_t j, std::vector<uint32_t>& indexe
     images.push_back(image_filenames_[t]);
   }
 
-  std::cout << scansRead << " point clouds read." << std::endl;
+  std::cout << ">>> " << scansRead << " point clouds read." << std::endl;
 
   // FIXME: keep more scans in cache. not only remove unloaded scans.
 
@@ -354,8 +360,10 @@ const KittiReader::Tile& KittiReader::getTile(uint32_t i, uint32_t j) const { re
 
 void KittiReader::setTileSize(float size) { tileSize_ = size; }
 
-// Rakshith: Update label file.
+// Rakshith: Update label file based on current labels marked in tool. 
+// Update is done across all scans in memory (not just those visible/toggled in the viewer)
 void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<LabelsPtr>& labels) {
+  std::cout << ">>> Updating labels as per changes made in viewer." << std::endl;
   for (uint32_t i = 0; i < indexes.size(); ++i) {
     if (labels[i]->size() == 0) {
       std::cout << "Warning: 0 labels?" << std::endl;
@@ -392,6 +400,7 @@ void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<Label
       out.close();
     } 
     else {
+      std::cout << ">>> Updating label file: " << label_filenames_[indexes[i]].c_str() << std::endl;
       std::ofstream out(label_filenames_[indexes[i]].c_str());
 
       std::string str;
@@ -412,9 +421,6 @@ void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<Label
 }
 
 void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
-  //@Rakshith
-  std::cout << "=== READ POINTS ===" << std::endl;
-  std::cout << filename << std::endl;
   
   if(b_bin_cloud) {
     std::ifstream in(filename.c_str(), std::ios::binary);
@@ -430,11 +436,10 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
     in.read((char*)&values[0], 4 * num_points * sizeof(float));
 
     //@Rakshith
-    std::cout << "num_points: " << num_points << std::endl;
-    std::cout << "sizeof(float): " << sizeof(float) << std::endl;
-    std::cout << "4*sizeof(float): " << 4*sizeof(float) << std::endl;
-    std::cout << "4*num_points*sizeof(float): " << 4*num_points*sizeof(float) << std::endl;
-
+    // std::cout << "num_points: " << num_points << std::endl;
+    // std::cout << "sizeof(float): " << sizeof(float) << std::endl;
+    // std::cout << "4*sizeof(float): " << 4*sizeof(float) << std::endl;
+    // std::cout << "4*num_points*sizeof(float): " << 4*num_points*sizeof(float) << std::endl;
 
     in.close();
 
@@ -487,7 +492,6 @@ void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
 
 // void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>& labels) {
 void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>& labels, uint32_t cloud_num_points) {
-  std::cout << "=== READ LABELS ===" << std::endl;
 
   if(b_bin_label) {
     std::ifstream in(filename.c_str(), std::ios::binary);
@@ -517,7 +521,7 @@ void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>&
     // Get rid of header lines
     std::string line;
     std::getline(in, line);
-    std::cout << "HEADER LINE 1: " << line << std::endl;
+    // std::cout << "HEADER LINE 1: " << line << std::endl;
 
     // process other lines
     int ctr = 0;
@@ -539,17 +543,14 @@ void KittiReader::readLabels(const std::string& filename, std::vector<uint32_t>&
 
         ctr += 1;
     }
-    std::cout << "non-header line ctr: " << ctr << std::endl;
+    std::cout << "size: " << ctr << std::endl;
   }
   
 }
 
 void KittiReader::readPoses(const std::string& filename, std::vector<Eigen::Matrix4f>& poses) {
-  std::cout << "=== READ POSES ===" << std::endl;
 
-  ///@Rakshith
-  std::cout << "------" << std::endl;
-  std::cout << filename << std::endl;
+  std::cout << ">>> Reading pose file." << std::endl;
 
   poses = KITTI::Odometry::loadPoses(filename);
 
@@ -559,10 +560,6 @@ void KittiReader::readPoses(const std::string& filename, std::vector<Eigen::Matr
   for (uint32_t i = 0; i < poses.size(); ++i) {
     poses[i] = Tr_inv * poses[i] * Tr;
   }
-
-  //@Rakshith
-  std::cout << "-----" << std::endl;
-  std::cout << poses.size() << std::endl;
 
 }
 

@@ -34,6 +34,11 @@
 
 class KittiReader {
  public:
+
+  bool b_bin_cloud = 0; // 0 = PCD XYZI or XYZIR file, 1 = binary XYZI file
+  bool b_bin_label = 0; // 0 = ASCII labels file, 1 = binary labels file
+  bool b_no_instances_support = 1; // Skip code related to instances. Use default instances.txt file with "0:0" in it.
+
   struct Tile {
     int32_t i, j;                   // tile coordinates
     std::vector<uint32_t> indexes;  // scan indexes
@@ -89,14 +94,10 @@ class KittiReader {
   std::vector<std::string> label_filenames_;
   std::vector<std::string> image_filenames_;
 
-  bool b_bin_cloud = 0; // 0 = PCD XYZI or XYZIR file, 1 = binary XYZI file
-  bool b_bin_label = 0; // 0 = ASCII labels file, 1 = binary labels file
-
   using PT_XYZ = pcl::PointXYZ;
   using PT_XYZI = pcl::PointXYZI;
   using PT_XYZIR = velodyne_pointcloud::PointXYZIR;
   using PT_TYPE = PT_XYZIR;
-
 
   // cache reads from before.
   std::map<uint32_t, PointcloudPtr> pointsCache_;

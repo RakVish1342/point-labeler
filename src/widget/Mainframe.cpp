@@ -529,9 +529,18 @@ void Mainframe::open() {
   if (!retValue.isNull()) {
     QDir base_dir(retValue);
 
-    if (!base_dir.exists("velodyne") || !base_dir.exists("poses.txt")) {
-      std::cout << "[ERROR] velodyne or poses.txt missing." << std::endl;
-      return;
+    std::cout << ">>> BASE_DIR: " << base_dir.absolutePath().toStdString() << std::endl;
+    if(reader_.b_bin_cloud) {
+      if (!base_dir.exists("velodyne") || !base_dir.exists("poses.txt")) {
+        std::cout << "[ERROR] velodyne_pcd or poses.txt missing." << std::endl;
+        return;
+      }
+    } 
+    else {
+      if (!base_dir.exists("velodyne_pcd") || !base_dir.exists("poses.txt")) {
+        std::cout << "[ERROR] velodyne_pcd or poses.txt missing." << std::endl;
+        return;
+      }      
     }
 
     // Rakshith: Main object that retains cloud, label, etc state when application is opened or running.

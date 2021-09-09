@@ -243,6 +243,12 @@ void KittiReader::initialize(const QString& directory) {
     std::cout << "finished." << std::endl;
     std::cout << "-----------" << std::endl;
   } else {
+    
+    if (b_no_instances_support) 
+    {
+      std::cout << ">>> Please place default instances.txt file with '0:0' in it." << std::endl;
+      exit(0);
+    }
     std::cout << "Generating intances.txt" << std::flush;
     // get the counts from the label files.
     for (const std::string& filename : label_filenames_) {
